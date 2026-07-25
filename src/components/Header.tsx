@@ -1,6 +1,5 @@
 import React from 'react';
 import { ChessComImportModal } from './ChessComImportModal';
-import { Crown, BarChart3, HelpCircle } from 'lucide-react';
 
 interface HeaderProps {
   onGameSelect: (pgn: string, meta?: any) => void;
@@ -15,13 +14,13 @@ export const Header: React.FC<HeaderProps> = ({ onGameSelect }) => {
         </div>
         <div>
           <h1 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
-            Chess.com <span className="text-emerald-400">Analyzer</span>
+            MIGHTY CHESS <span className="text-emerald-400">ANALYZER</span>
             <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
               PRO
             </span>
           </h1>
           <p className="text-[11px] text-slate-400 hidden sm:block">
-            Engine accuracy, key moments & game classification breakdown
+            Engine accuracy, key moments & move classification breakdown
           </p>
         </div>
       </div>
