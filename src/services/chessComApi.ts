@@ -1,7 +1,8 @@
 import { ChessComArchiveGame } from '@/types/chess';
 
 export async function fetchChessComPlayerProfile(username: string) {
-  const res = await fetch(`https://api.chess.com/pub/player/${encodeURIComponent(username.trim().toLowerCase())}`);
+  const cleanUser = encodeURIComponent(username.trim().toLowerCase());
+  const res = await fetch(`https://api.chess.com/pub/player/${cleanUser}`);
   if (!res.ok) {
     throw new Error(`Player '${username}' not found on Chess.com.`);
   }
@@ -9,7 +10,7 @@ export async function fetchChessComPlayerProfile(username: string) {
 }
 
 export async function fetchChessComRecentGames(username: string): Promise<ChessComArchiveGame[]> {
-  const cleanUser = username.trim().toLowerCase();
+  const cleanUser = encodeURIComponent(username.trim().toLowerCase());
   
   // 1. Get archives list
   const archivesRes = await fetch(`https://api.chess.com/pub/player/${cleanUser}/games/archives`);
