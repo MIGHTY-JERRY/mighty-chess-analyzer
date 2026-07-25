@@ -15,8 +15,9 @@ export const Header: React.FC<HeaderProps> = ({ onGameSelect }) => {
         <div>
           <h1 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
             MIGHTY CHESS <span className="text-emerald-400">ANALYZER</span>
-            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
-              PRO
+            <span className="text-xs bg-cyan-500/20 text-cyan-300 font-extrabold px-2 py-0.5 rounded-full border border-cyan-500/40 flex items-center gap-1 shadow-sm shadow-cyan-500/20">
+              <span>‼️</span>
+              <span>BRILLIANT</span>
             </span>
           </h1>
           <p className="text-[11px] text-slate-400 hidden sm:block">
