@@ -1,5 +1,5 @@
 # MIGHTY CHESS ANALYZER
 
-A chess game analyzer for Chess.com games with real-time accuracy scoring, move classifications, centipawn advantage graphs, key moment filters, and interactive engine analysis.
+A chess game analyzer for Chess.com games with real-time accuracy scoring, move classifications, centipawn advantage graphs, key moment filters, and interactive engine analysis **FULLY FREEE !!!!**
 
 Made by [Jashan](https://github.com/MIGHTY-JERRY)
