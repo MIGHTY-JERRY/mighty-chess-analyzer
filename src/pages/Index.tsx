@@ -8,9 +8,11 @@ import { EvaluationGraph } from '@/components/EvaluationGraph';
 import { GameSummaryCard } from '@/components/GameSummaryCard';
 import { MoveHistory } from '@/components/MoveHistory';
 import { KeyMoments } from '@/components/KeyMoments';
+import { MoveCoachCard } from '@/components/MoveCoachCard';
 import { MoveClassificationBadge } from '@/components/MoveClassificationBadge';
 import { Header } from '@/components/Header';
 import { MadeWithDyad } from '@/components/made-with-dyad';
+import { sound } from '@/utils/sound';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -40,7 +42,13 @@ const Index = () => {
   const [currentMoveIdx, setCurrentMoveIdx] = useState<number>(0);
   const [orientation, setOrientation] = useState<'white' | 'black'>('white');
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [playSpeed, setPlaySpeed] = useState<number>(1000); // ms per move
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
+  const [playSpeed, setPlaySpeed] = useState<number>(1200); // ms per move
+
+  // Sync sound setting
+  useEffect(() => {
+    sound.enabled = soundEnabled;
+  }, [soundEnabled]);
 
   // Current move state
   const currentMove = currentGame.moves[currentMoveIdx];
@@ -51,6 +59,27 @@ const Index = () => {
   const lastMove = currentMove ? { from: currentMove.from, to: currentMove.to } : null;
   const currentEval = currentMove ? currentMove.evalAfter : 0;
 
+  // Play sound when current move index changes
+  const triggerMoveSound = (move: typeof currentMove) => {
+    if (!move) return;
+    if (move.classification === 'brilliant') {
+      sound.playBrilliant();
+    } else if (move.isCheck) {
+      sound.playCheck();
+    } else if (move.captured) {
+      sound.playCapture();
+    } else {
+      sound.playMove();
+    }
+  };
+
+  const setMoveIndex = (newIdx: number) => {
+    setCurrentMoveIdx(newIdx);
+    if (currentGame.moves[newIdx]) {
+      triggerMoveSound(currentGame.moves[newIdx]);
+    }
+  };
+
   // Auto-play timer
   useEffect(() => {
     let interval: any = null;
@@ -58,7 +87,9 @@ const Index = () => {
       interval = setInterval(() => {
         setCurrentMoveIdx((prev) => {
           if (prev < currentGame.moves.length - 1) {
-            return prev + 1;
+            const nextIdx = prev + 1;
+            triggerMoveSound(currentGame.moves[nextIdx]);
+            return nextIdx;
           } else {
             setIsPlaying(false);
             return prev;
@@ -67,7 +98,7 @@ const Index = () => {
       }, playSpeed);
     }
     return () => clearInterval(interval);
-  }, [isPlaying, playSpeed, currentGame.moves.length]);
+  }, [isPlaying, playSpeed, currentGame.moves]);
 
   const handleGameSelect = (pgn: string, meta?: any) => {
     try {
@@ -80,11 +111,10 @@ const Index = () => {
     }
   };
 
-  const handleFirstMove = () => setCurrentMoveIdx(0);
-  const handlePrevMove = () => setCurrentMoveIdx((prev) => Math.max(0, prev - 1));
-  const handleNextMove = () =>
-    setCurrentMoveIdx((prev) => Math.min(currentGame.moves.length - 1, prev + 1));
-  const handleLastMove = () => setCurrentMoveIdx(currentGame.moves.length - 1);
+  const handleFirstMove = () => setMoveIndex(0);
+  const handlePrevMove = () => setMoveIndex(Math.max(0, currentMoveIdx - 1));
+  const handleNextMove = () => setMoveIndex(Math.min(currentGame.moves.length - 1, currentMoveIdx + 1));
+  const handleLastMove = () => setMoveIndex(currentGame.moves.length - 1);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
@@ -167,29 +197,27 @@ const Index = () => {
                 <Button
                   size="sm"
                   variant="outline"
+                  onClick={() => setSoundEnabled(!soundEnabled)}
+                  className="border-slate-700 bg-slate-950 text-xs text-slate-300 hover:text-white"
+                >
+                  {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
                   onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))}
                   className="border-slate-700 bg-slate-950 text-xs text-slate-300 hover:text-white"
                 >
                   <RotateCcw className="w-3.5 h-3.5 mr-1" />
-                  Flip Board
+                  Flip
                 </Button>
               </div>
             </div>
 
-            {/* Current Move Insights Banner */}
-            {currentMove && (
-              <div className="w-full max-w-[580px] bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between gap-3 shadow-md">
-                <div className="flex items-center gap-3">
-                  <div className="text-sm font-black font-mono bg-slate-950 px-2.5 py-1 rounded border border-slate-800 text-emerald-400">
-                    {Math.ceil(currentMove.ply / 2)}. {currentMove.san}
-                  </div>
-                  <div>
-                    <MoveClassificationBadge type={currentMove.classification} />
-                    <p className="text-xs text-slate-400 mt-1">{currentMove.comment}</p>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Chess Coach Explanations */}
+            <div className="w-full max-w-[580px]">
+              <MoveCoachCard move={currentMove} moveNumber={Math.ceil((currentMoveIdx + 1) / 2)} />
+            </div>
           </div>
 
           {/* Right Column: Graphs, Move History & Key Moments Tabs */}
@@ -198,7 +226,7 @@ const Index = () => {
             <EvaluationGraph
               moves={currentGame.moves}
               currentMoveIndex={currentMoveIdx}
-              onMoveSelect={(idx) => setCurrentMoveIdx(idx)}
+              onMoveSelect={(idx) => setMoveIndex(idx)}
             />
 
             {/* Tabbed Panel */}
@@ -216,14 +244,14 @@ const Index = () => {
                 <MoveHistory
                   moves={currentGame.moves}
                   currentMoveIndex={currentMoveIdx}
-                  onMoveSelect={(idx) => setCurrentMoveIdx(idx)}
+                  onMoveSelect={(idx) => setMoveIndex(idx)}
                 />
               </TabsContent>
 
               <TabsContent value="key" className="mt-3">
                 <KeyMoments
                   moves={currentGame.moves}
-                  onMoveSelect={(idx) => setCurrentMoveIdx(idx)}
+                  onMoveSelect={(idx) => setMoveIndex(idx)}
                 />
               </TabsContent>
             </Tabs>

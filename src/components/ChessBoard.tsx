@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Chess, Square, PieceSymbol, Color } from 'chess.js';
+import { Chess, Square, PieceSymbol } from 'chess.js';
 
 interface ChessBoardProps {
   fen: string;
@@ -8,12 +8,6 @@ interface ChessBoardProps {
   onSquareClick?: (square: string) => void;
   selectedSquare?: string | null;
 }
-
-// Custom Unicode piece representation with high contrast styling
-const UNICODE_PIECES: Record<string, string> = {
-  wP: '♙', wN: '♘', wB: '♗', wR: '♖', wQ: '♕', wK: '♔',
-  bP: '♟', bN: '♞', bB: '♝', bR: '♜', bQ: '♛', bK: '♚',
-};
 
 // SVG piece icons for sharp high-end visual look
 const PIECE_SVG_URLS: Record<string, string> = {
@@ -38,6 +32,10 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   onSquareClick,
   selectedSquare,
 }) => {
+  const [internalSelectedSquare, setInternalSelectedSquare] = useState<string | null>(null);
+
+  const activeSelected = selectedSquare !== undefined ? selectedSquare : internalSelectedSquare;
+
   const chess = new Chess();
   try {
     chess.load(fen);
@@ -46,6 +44,30 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   }
 
   const board = chess.board();
+  const inCheck = chess.inCheck();
+  const turn = chess.turn();
+
+  // Find King square if in check
+  let checkingKingSquare: string | null = null;
+  if (inCheck) {
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const p = board[r][c];
+        if (p && p.type === 'k' && p.color === turn) {
+          const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+          checkingKingSquare = `${files[c]}${8 - r}`;
+          break;
+        }
+      }
+    }
+  }
+
+  // Get legal move destinations for selected square
+  let legalMoveSquares: string[] = [];
+  if (activeSelected) {
+    const legalMoves = chess.moves({ square: activeSelected as Square, verbose: true });
+    legalMoveSquares = legalMoves.map((m) => m.to);
+  }
 
   // Create grid coordinates depending on orientation
   const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
@@ -54,8 +76,20 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
   const displayRanks = orientation === 'white' ? ranks : [...ranks].reverse();
   const displayFiles = orientation === 'white' ? files : [...files].reverse();
 
+  const handleSquareClick = (sq: string) => {
+    if (onSquareClick) {
+      onSquareClick(sq);
+    } else {
+      if (internalSelectedSquare === sq) {
+        setInternalSelectedSquare(null);
+      } else {
+        setInternalSelectedSquare(sq);
+      }
+    }
+  };
+
   return (
-    <div className="relative w-full aspect-square max-w-[560px] mx-auto rounded-xl shadow-2xl overflow-hidden border-4 border-emerald-900 bg-emerald-950 flex flex-col select-none">
+    <div className="relative w-full aspect-square max-w-[560px] mx-auto rounded-xl shadow-2xl overflow-hidden border-4 border-emerald-900/80 bg-emerald-950 flex flex-col select-none">
       <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
         {displayRanks.map((rank, rIdx) =>
           displayFiles.map((file, fIdx) => {
@@ -72,7 +106,9 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
             // Highlights
             const isLastMoveFrom = lastMove?.from === squareName;
             const isLastMoveTo = lastMove?.to === squareName;
-            const isSelected = selectedSquare === squareName;
+            const isSelected = activeSelected === squareName;
+            const isLegalTarget = legalMoveSquares.includes(squareName);
+            const isCheckedKing = checkingKingSquare === squareName;
 
             let squareBg = isLight ? 'bg-[#eeeed2]' : 'bg-[#769656]';
             
@@ -82,13 +118,16 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
             if (isSelected) {
               squareBg = 'bg-amber-300 border-2 border-amber-600';
             }
+            if (isCheckedKing) {
+              squareBg = 'bg-red-500 animate-pulse';
+            }
 
             const pieceKey = pieceObj ? `${pieceObj.color}${pieceObj.type.toUpperCase()}` : null;
 
             return (
               <div
                 key={squareName}
-                onClick={() => onSquareClick && onSquareClick(squareName)}
+                onClick={() => handleSquareClick(squareName)}
                 className={`relative flex items-center justify-center cursor-pointer transition-colors duration-150 ${squareBg}`}
               >
                 {/* File / Rank Labels on edges */}
@@ -111,12 +150,20 @@ export const ChessBoard: React.FC<ChessBoardProps> = ({
                   </span>
                 )}
 
+                {/* Legal Move Hint Marker */}
+                {isLegalTarget && !pieceObj && (
+                  <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-slate-900/30 z-10 pointer-events-none" />
+                )}
+                {isLegalTarget && pieceObj && (
+                  <div className="absolute inset-0 border-4 border-slate-900/40 rounded-full z-10 pointer-events-none" />
+                )}
+
                 {/* Piece Rendering */}
                 {pieceKey && PIECE_SVG_URLS[pieceKey] && (
                   <img
                     src={PIECE_SVG_URLS[pieceKey]}
                     alt={pieceKey}
-                    className="w-[85%] h-[85%] object-contain drop-shadow-md transition-transform duration-200 hover:scale-105 pointer-events-none"
+                    className="w-[85%] h-[85%] object-contain drop-shadow-md transition-transform duration-200 hover:scale-105 pointer-events-none z-0"
                     loading="eager"
                   />
                 )}
